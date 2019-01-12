@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/peritext/peritext-generator-html-multi#readme",
   "peerDependencies": {
+    "fs-extra": "^7.0.1",
     "react": "^16.7.0-alpha",
     "react-dom": "^16.7.0-alpha"
   },
