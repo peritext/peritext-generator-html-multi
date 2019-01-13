@@ -39,6 +39,7 @@ function generateOutput ( {
   const { templates } = peritextConfig;
   const template = templates.find( ( thatT ) => thatT.meta.id === edition.metadata.templateId );
   const utils = template.utils;
+  const { routeItemToUrl } = utils;
   let loadedProduction;
   let editionAssets;
   return new Promise( ( resolve, reject ) => {
@@ -125,29 +126,35 @@ function generateOutput ( {
         .map( ( navItem, navItemIndex ) => {
           return {
             ...navItem,
-            route: utils.routeItemToUrl( navItem, navItemIndex ),
+            route: routeItemToUrl( navItem, navItemIndex ),
           };
         } );
       return nav.reduce( ( cur, navItem ) =>
         cur.then( () => new Promise( ( res1, rej1 ) => {
-          const { route, viewId, viewClass, routeParams } = navItem;
+          const { route, viewId, routeClass, routeParams } = navItem;
           const routeFolder = `${jobTempFolderPath}${route.split( '?' )[0]}`;
-          const Comp = template.components.Production;
+          const Comp = template.components.Edition;
           let htmlContent = '';
           try {
             htmlContent = renderToString(
-              <StaticRouter>
+              <StaticRouter
+                context={ {} }
+                location={ navItem.route }
+              >
                 <Comp
                   viewId={ viewId }
-                  viewClass={ viewClass }
+                  viewClass={ routeClass }
                   viewParams={ routeParams }
                   production={ loadedProduction }
                   edition={ edition }
                   locale={ locale }
+                  previewMode
                   contextualizers={ peritextConfig.contextualizers }
                 />
               </StaticRouter>
             );
+            if ( routeClass === 'sections' )
+              console.log( 'html content', htmlContent );
           }
           catch ( e ) {
             console.error( 'e', e );/* eslint no-console : 0 */
@@ -159,10 +166,23 @@ function generateOutput ( {
           const html = `<!DOCTYPE html>
 <html>
       ${head}
+      <style>
+        .static-wrapper{
+          opacity: 0;
+          transitions: all .5s ease;
+        }
+      </style>
       <body>
         <div id="mount">
-          ${htmlContent}
+          <div class="static-wrapper">
+            ${htmlContent}
+          </div>
         </div>
+        <style>
+        .static-wrapper{
+          opacity: 1;
+        }
+      </style>
         <script>
                 function loadJSON(callback) {  
 
