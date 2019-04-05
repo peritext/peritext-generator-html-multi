@@ -163,6 +163,9 @@ function generateOutput ( {
           const head = renderToStaticMarkup(
             utils.renderHeadFromRouteItem( { production: loadedProduction, edition, item: navItem } )
             );
+          const { data = {} } = edition;
+          const { allowAnnotation = false } = data;
+
           const html = `<!DOCTYPE html>
 <html>
       ${head}
@@ -183,6 +186,7 @@ function generateOutput ( {
           opacity: 1;
         }
       </style>
+    ${allowAnnotation ? '<script src="https://hypothes.is/embed.js" async></script>' : ''}
         <script>
                 function loadJSON(callback) {  
 
