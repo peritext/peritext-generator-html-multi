@@ -27,10 +27,10 @@ function generateOutput ( {
   outputPath,
   tempDirPath = './temp',
   requestAssetData,
+  onFeedback,
   basePath,
   config = {},
 } ) {
-
   const jobId = genId();
 
   const jobTempFolderPath = `${tempDirPath}/${jobId}`;
@@ -42,19 +42,37 @@ function generateOutput ( {
   const { routeItemToUrl } = utils;
   let loadedProduction;
   let editionAssets;
+  if ( typeof onFeedback === 'function' ) {
+    onFeedback( {
+      type: 'info',
+      message: 'starting generation'
+    } );
+  }
   return new Promise( ( resolve, reject ) => {
     Promise.resolve()
     .then( () =>
       ensureDir( outputAssetsPath )
     )
-    .then( () =>
-      loadAssetsForEdition( {
+    .then( () => {
+      if ( typeof onFeedback === 'function' ) {
+        onFeedback( {
+          type: 'info',
+          message: 'starting generation'
+        } );
+      }
+      return loadAssetsForEdition( {
         production: initialProduction,
         edition,
         requestAssetData
-      } )
-    )
+      } );
+    } )
     .then( ( loadedAssets ) => {
+      if ( typeof onFeedback === 'function' ) {
+        onFeedback( {
+          type: 'info',
+          message: 'loading template'
+        } );
+      }
       editionAssets = loadedAssets;
       loadedProduction = {
           ...initialProduction,
@@ -67,7 +85,13 @@ function generateOutput ( {
       return writeFile( `${jobTempFolderPath}/bundle.js`, jsBundle, 'utf8' );
     } )
     .then( () => {
-      return Object.keys( editionAssets ).reduce( ( cur, assetId ) => {
+      if ( typeof onFeedback === 'function' ) {
+        onFeedback( {
+          type: 'info',
+          message: 'packing assets'
+        } );
+      }
+      return Object.keys( editionAssets ).reduce( ( cur, assetId, assetIndex ) => {
         return cur
         .then( () => new Promise( ( res1, rej1 ) => {
           const asset = editionAssets[assetId];
@@ -75,6 +99,16 @@ function generateOutput ( {
           const assetDirPath = `${outputAssetsPath}/${asset.id}`;
           const assetFilePath = `${assetDirPath}/${asset.filename}`;
           const url = `/${asset.id}/${asset.filename}`;
+          if ( typeof onFeedback === 'function' ) {
+            onFeedback( {
+              type: 'info',
+              message: 'packing asset',
+              payload: {
+                currentIndex: assetIndex,
+                totalIndex: Object.keys( editionAssets ).length
+              }
+            } );
+          }
           switch ( mimetype ) {
             case 'image/png':
             case 'image/jpeg':
@@ -122,6 +156,12 @@ function generateOutput ( {
     } )
 
     .then( () => {
+      if ( typeof onFeedback === 'function' ) {
+        onFeedback( {
+          type: 'info',
+          message: 'building website'
+        } );
+      }
       const nav = utils.buildNav( { production: initialProduction, edition, locale } ).concat( utils.getAdditionalRoutes() )
         .map( ( navItem, navItemIndex ) => {
           return {
@@ -153,8 +193,11 @@ function generateOutput ( {
                 />
               </StaticRouter>
             );
-            if ( routeClass === 'sections' )
-              console.log( 'html content', htmlContent );
+
+            /*
+             * if ( routeClass === 'sections' )
+             * console.log( 'html content', htmlContent );
+             */
           }
           catch ( e ) {
             console.error( 'e', e );/* eslint no-console : 0 */
@@ -235,6 +278,12 @@ function generateOutput ( {
      * Creating and filling the archive
      */
     .then( () => {
+      if ( typeof onFeedback === 'function' ) {
+        onFeedback( {
+          type: 'info',
+          message: 'creating archive'
+        } );
+      }
       return new Promise( ( res1, rej1 ) => {
         const output = createWriteStream( outputPath );
         const archive = archiver( 'zip', {
@@ -247,6 +296,12 @@ function generateOutput ( {
          * 'close' event is fired only when a file descriptor is involved
          */
         output.on( 'close', function() {
+          if ( typeof onFeedback === 'function' ) {
+            onFeedback( {
+              type: 'success',
+              message: 'archive created'
+            } );
+          }
           res1();
         } );
 
@@ -256,6 +311,12 @@ function generateOutput ( {
          * @see: https://nodejs.org/api/stream.html#stream_event_end
          */
         output.on( 'end', function() {
+          if ( typeof onFeedback === 'function' ) {
+            onFeedback( {
+              type: 'success',
+              message: 'archive created'
+            } );
+          }
           res1();
         } );
 
@@ -265,6 +326,15 @@ function generateOutput ( {
             // log warning
           }
  else {
+          if ( typeof onFeedback === 'function' ) {
+            onFeedback( {
+              type: 'error',
+              message: 'archive error',
+              payload: {
+                error: err
+              }
+            } );
+          }
             // throw error
             rej1( err );
           }
@@ -272,6 +342,15 @@ function generateOutput ( {
 
         // good practice to catch this error explicitly
         archive.on( 'error', function( err ) {
+          if ( typeof onFeedback === 'function' ) {
+            onFeedback( {
+              type: 'error',
+              message: 'archive error',
+              payload: {
+                error: err
+              }
+            } );
+          }
           rej1( err );
           // throw err;
         } );
@@ -283,9 +362,15 @@ function generateOutput ( {
       } );
 
     } )
-    .then( () =>
-      remove( jobTempFolderPath )
-    )
+    .then( () => {
+      if ( typeof onFeedback === 'function' ) {
+        onFeedback( {
+          type: 'info',
+          message: 'cleaning temporary files'
+        } );
+      }
+      remove( jobTempFolderPath );
+    } )
     .then( resolve )
     .catch( reject );
   } );

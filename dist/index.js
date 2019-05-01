@@ -32,6 +32,7 @@ function generateOutput({
   outputPath,
   tempDirPath = './temp',
   requestAssetData,
+  onFeedback,
   basePath,
   config = {}
 }) {
@@ -48,12 +49,36 @@ function generateOutput({
   } = utils;
   let loadedProduction;
   let editionAssets;
+
+  if (typeof onFeedback === 'function') {
+    onFeedback({
+      type: 'info',
+      message: 'starting generation'
+    });
+  }
+
   return new Promise((resolve, reject) => {
-    Promise.resolve().then(() => (0, _fsExtra.ensureDir)(outputAssetsPath)).then(() => (0, _peritextUtils.loadAssetsForEdition)({
-      production: initialProduction,
-      edition,
-      requestAssetData
-    })).then(loadedAssets => {
+    Promise.resolve().then(() => (0, _fsExtra.ensureDir)(outputAssetsPath)).then(() => {
+      if (typeof onFeedback === 'function') {
+        onFeedback({
+          type: 'info',
+          message: 'starting generation'
+        });
+      }
+
+      return (0, _peritextUtils.loadAssetsForEdition)({
+        production: initialProduction,
+        edition,
+        requestAssetData
+      });
+    }).then(loadedAssets => {
+      if (typeof onFeedback === 'function') {
+        onFeedback({
+          type: 'info',
+          message: 'loading template'
+        });
+      }
+
       editionAssets = loadedAssets;
       loadedProduction = _objectSpread({}, initialProduction, {
         assets: loadedAssets
@@ -63,13 +88,31 @@ function generateOutput({
     }).then(jsBundle => {
       return (0, _fsExtra.writeFile)(`${jobTempFolderPath}/bundle.js`, jsBundle, 'utf8');
     }).then(() => {
-      return Object.keys(editionAssets).reduce((cur, assetId) => {
+      if (typeof onFeedback === 'function') {
+        onFeedback({
+          type: 'info',
+          message: 'packing assets'
+        });
+      }
+
+      return Object.keys(editionAssets).reduce((cur, assetId, assetIndex) => {
         return cur.then(() => new Promise((res1, rej1) => {
           const asset = editionAssets[assetId];
           const mimetype = asset.mimetype;
           const assetDirPath = `${outputAssetsPath}/${asset.id}`;
           const assetFilePath = `${assetDirPath}/${asset.filename}`;
           const url = `/${asset.id}/${asset.filename}`;
+
+          if (typeof onFeedback === 'function') {
+            onFeedback({
+              type: 'info',
+              message: 'packing asset',
+              payload: {
+                currentIndex: assetIndex,
+                totalIndex: Object.keys(editionAssets).length
+              }
+            });
+          }
 
           switch (mimetype) {
             case 'image/png':
@@ -109,6 +152,13 @@ function generateOutput({
 
       return (0, _fsExtra.writeFile)(`${jobTempFolderPath}/production.json`, JSON.stringify(finalAssets), 'utf8');
     }).then(() => {
+      if (typeof onFeedback === 'function') {
+        onFeedback({
+          type: 'info',
+          message: 'building website'
+        });
+      }
+
       const nav = utils.buildNav({
         production: initialProduction,
         edition,
@@ -143,7 +193,10 @@ function generateOutput({
             previewMode: true,
             contextualizers: peritextConfig.contextualizers
           })));
-          if (routeClass === 'sections') console.log('html content', htmlContent);
+          /*
+           * if ( routeClass === 'sections' )
+           * console.log( 'html content', htmlContent );
+           */
         } catch (e) {
           console.error('e', e);
           /* eslint no-console : 0 */
@@ -219,6 +272,13 @@ function generateOutput({
      * Creating and filling the archive
      */
     .then(() => {
+      if (typeof onFeedback === 'function') {
+        onFeedback({
+          type: 'info',
+          message: 'creating archive'
+        });
+      }
+
       return new Promise((res1, rej1) => {
         const output = (0, _fsExtra.createWriteStream)(outputPath);
         const archive = (0, _archiver.default)('zip', {
@@ -234,6 +294,13 @@ function generateOutput({
          */
 
         output.on('close', function () {
+          if (typeof onFeedback === 'function') {
+            onFeedback({
+              type: 'success',
+              message: 'archive created'
+            });
+          }
+
           res1();
         });
         /*
@@ -243,25 +310,61 @@ function generateOutput({
          */
 
         output.on('end', function () {
+          if (typeof onFeedback === 'function') {
+            onFeedback({
+              type: 'success',
+              message: 'archive created'
+            });
+          }
+
           res1();
         }); // good practice to catch warnings (ie stat failures and other non-blocking errors)
 
         archive.on('warning', function (err) {
           if (err.code === 'ENOENT') {// log warning
           } else {
-            // throw error
+            if (typeof onFeedback === 'function') {
+              onFeedback({
+                type: 'error',
+                message: 'archive error',
+                payload: {
+                  error: err
+                }
+              });
+            } // throw error
+
+
             rej1(err);
           }
         }); // good practice to catch this error explicitly
 
         archive.on('error', function (err) {
+          if (typeof onFeedback === 'function') {
+            onFeedback({
+              type: 'error',
+              message: 'archive error',
+              payload: {
+                error: err
+              }
+            });
+          }
+
           rej1(err); // throw err;
         }); // pipe archive data to the file
 
         archive.pipe(output);
         archive.finalize();
       });
-    }).then(() => (0, _fsExtra.remove)(jobTempFolderPath)).then(resolve).catch(reject);
+    }).then(() => {
+      if (typeof onFeedback === 'function') {
+        onFeedback({
+          type: 'info',
+          message: 'cleaning temporary files'
+        });
+      }
+
+      (0, _fsExtra.remove)(jobTempFolderPath);
+    }).then(resolve).catch(reject);
   });
 }
 
