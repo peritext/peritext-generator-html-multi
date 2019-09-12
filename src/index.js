@@ -28,7 +28,7 @@ function generateOutput ( {
   tempDirPath = './temp',
   requestAssetData,
   onFeedback,
-  basePath,
+  templatesBundlesPath,
   config = {},
 } ) {
   const jobId = genId();
@@ -57,7 +57,7 @@ function generateOutput ( {
       if ( typeof onFeedback === 'function' ) {
         onFeedback( {
           type: 'info',
-          message: 'starting generation'
+          message: 'loading assets'
         } );
       }
       return loadAssetsForEdition( {
@@ -78,7 +78,7 @@ function generateOutput ( {
           ...initialProduction,
           assets: loadedAssets
         };
-      const templatePath = `${basePath}/app/htmlBuilds/single-page-html/${edition.metadata.templateId}/bundle.js`;
+      const templatePath = `${templatesBundlesPath}/${edition.metadata.templateId}/bundle.js`;
       return readFile( templatePath, 'utf8' );
     } )
     .then( ( jsBundle ) => {
@@ -96,9 +96,9 @@ function generateOutput ( {
         .then( () => new Promise( ( res1, rej1 ) => {
           const asset = editionAssets[assetId];
           const mimetype = asset.mimetype;
-          const assetDirPath = `${outputAssetsPath}/${asset.id}`;
+          const assetDirPath = `${outputAssetsPath}/assets/${asset.id}`;
           const assetFilePath = `${assetDirPath}/${asset.filename}`;
-          const url = `/${asset.id}/${asset.filename}`;
+          const url = `/assets/${asset.id}/${asset.filename}`;
           if ( typeof onFeedback === 'function' ) {
             onFeedback( {
               type: 'info',
@@ -188,7 +188,6 @@ function generateOutput ( {
                   production={ loadedProduction }
                   edition={ edition }
                   locale={ locale }
-                  previewMode
                   contextualizers={ peritextConfig.contextualizers }
                 />
               </StaticRouter>
@@ -229,27 +228,41 @@ function generateOutput ( {
           opacity: 1;
         }
       </style>
-    ${allowAnnotation ? '<script src="https://hypothes.is/embed.js" async></script>' : ''}
+      ${allowAnnotation ? '<script src="https://hypothes.is/embed.js" async></script>' : ''}
         <script>
-                function loadJSON(callback) {  
-
+              function loadJS(url, location){
+                  //url is URL of external file, implementationCode is the code
+                  //to be called from the file, location is the location to 
+                  //insert the <script> element
+                  var scriptTag = document.createElement('script');
+                  scriptTag.src = url;
+                  location.appendChild(scriptTag);
+              };
+              function loadJSON(URL, callback) {   
                 var xobj = new XMLHttpRequest();
                     xobj.overrideMimeType("application/json");
-                xobj.open('GET', '/production.json', true); // Replace 'my_data' with the path to your file
+                xobj.open('GET', URL, true); // Replace 'my_data' with the path to your file
                 xobj.onreadystatechange = function () {
                       if (xobj.readyState == 4 && xobj.status == "200") {
                         // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
-                        callback(JSON.parse(xobj.responseText));
+                        callback(xobj.responseText);
                       }
                 };
                 xobj.send(null);  
-             }
-            var __production;
-            window.toWatch = {production: window.__production}
-            loadJSON(function(data) {
-              __production = data;
-              window.toWatch.production = data;
+            }
+            var urlPrefix = window.location.origin + '/'
+            /**
+             * Dynamically loading the JSON data
+             */
+            loadJSON(urlPrefix + 'production.json', function(prod) {
+              window.__production = JSON.parse(prod);
+              /**
+               * Dynamically loading the html bundle 
+               */
+              var bundleURL = urlPrefix + 'bundle.js';
+              loadJS(bundleURL, document.body);
             })
+            
 
             var __editionId = "${edition.id}";
             var __locale = ${JSON.stringify( locale )} || {};
@@ -261,7 +274,6 @@ function generateOutput ( {
             }
         </script>
         <script type="text/javascript" src="/bundle.js"></script>
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBSfycBqpNHM0ieFYBhNW24h7mgQ2CTjQ&libraries=places"></script>
         <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@1"></script>
       </body>
     </html>`;
@@ -325,7 +337,7 @@ function generateOutput ( {
           if ( err.code === 'ENOENT' ) {
             // log warning
           }
- else {
+          else {
           if ( typeof onFeedback === 'function' ) {
             onFeedback( {
               type: 'error',
