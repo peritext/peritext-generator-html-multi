@@ -211,23 +211,13 @@ function generateOutput ( {
           const html = `<!DOCTYPE html>
 <html>
       ${head}
-      <style>
-        .static-wrapper{
-          opacity: 0;
-          transitions: all .5s ease;
-        }
-      </style>
       <body>
         <div id="mount">
-          <div class="static-wrapper">
-            ${htmlContent}
-          </div>
         </div>
-        <style>
-        .static-wrapper{
-          opacity: 1;
-        }
-      </style>
+        <div id="static">
+        ${htmlContent}
+        </div>
+
       ${allowAnnotation ? '<script src="https://hypothes.is/embed.js" async></script>' : ''}
         <script>
               function loadJS(url, location){
