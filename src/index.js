@@ -25,6 +25,7 @@ function generateOutput ( {
   peritextConfig = {},
   locale = {},
   outputPath,
+  preprocessedData,
   tempDirPath = './temp',
   requestAssetData,
   onFeedback,
@@ -154,6 +155,12 @@ function generateOutput ( {
 
       return writeFile( `${jobTempFolderPath}/production.json`, JSON.stringify( finalAssets ), 'utf8' );
     } )
+    .then( () => {
+      if ( preprocessedData ) {
+        return writeFile( `${jobTempFolderPath}/preprocessedData.json`, JSON.stringify( preprocessedData ), 'utf8' );
+      }
+      else return Promise.resolve();
+    } )
 
     .then( () => {
       if ( typeof onFeedback === 'function' ) {
@@ -246,11 +253,30 @@ function generateOutput ( {
              */
             loadJSON(urlPrefix + 'production.json', function(prod) {
               window.__production = JSON.parse(prod);
+              ${
+                // loading preprocessed data if available
+                preprocessedData ?
+                `
+              loadJSON(urlPrefix + 'preprocessedData.json', function(preprocessedData) {
+                window.__preprocessedData = JSON.parse(preprocessedData)
+                /**
+                 * Dynamically loading the html bundle 
+                 */
+                var bundleURL = urlPrefix + 'bundle.js';
+                loadJS(bundleURL, document.body);
+              });
+
+              `
+                :
+              `
               /**
                * Dynamically loading the html bundle 
                */
               var bundleURL = urlPrefix + 'bundle.js';
               loadJS(bundleURL, document.body);
+              `
+              }
+              
             })
             
 
