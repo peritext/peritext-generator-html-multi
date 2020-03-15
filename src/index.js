@@ -24,6 +24,7 @@ function generateOutput ( {
   edition = {},
   peritextConfig = {},
   locale = {},
+  urlPrefix = '',
   outputPath,
   preprocessedData,
   tempDirPath = './temp',
@@ -99,7 +100,7 @@ function generateOutput ( {
           const mimetype = asset.mimetype;
           const assetDirPath = `${outputAssetsPath}/assets/${asset.id}`;
           const assetFilePath = `${assetDirPath}/${asset.filename}`;
-          const url = `/assets/${asset.id}/${asset.filename}`;
+          const url = `${urlPrefix}/assets/${asset.id}/${asset.filename}`;
           if ( typeof onFeedback === 'function' ) {
             onFeedback( {
               type: 'info',
@@ -329,7 +330,7 @@ function generateOutput ( {
               loader.style.opacity = 0;
               loader.style.pointerEvents = 'none';
             }
-            var urlPrefix = window.location.origin + '/';
+            var urlPrefix = "${urlPrefix}"
             /**
              * add loader
              */
@@ -337,13 +338,13 @@ function generateOutput ( {
             /**
              * Dynamically loading the JSON data
              */
-            loadJSON(urlPrefix + 'production.json', function(prod) {
+            loadJSON(urlPrefix + '/production.json', function(prod) {
               window.__production = JSON.parse(prod);
               ${
                 // loading preprocessed data if available
                 preprocessedData ?
                 `
-              loadJSON(urlPrefix + 'preprocessedData.json', function(preprocessedData) {
+              loadJSON(urlPrefix + '/preprocessedData.json', function(preprocessedData) {
                 window.__preprocessedData = JSON.parse(preprocessedData)
                 /**
                  * Dynamically loading the html bundle 
