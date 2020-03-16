@@ -1,6 +1,6 @@
 {
   "name": "peritext-generator-html-multi",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "an edition generator producing a static website archive for the peritext ecosystem",
   "main": "dist/index.js",
   "scripts": {
