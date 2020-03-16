@@ -23,7 +23,8 @@
   "peerDependencies": {
     "fs-extra": "^7.0.1",
     "react": "^16.7.0-alpha",
-    "react-dom": "^16.7.0-alpha"
+    "react-dom": "^16.7.0-alpha",
+    "peritext-utils": "0.2.17"
   },
   "dependencies": {
     "archiver": "^3.0.0",
